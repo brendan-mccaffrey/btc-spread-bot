@@ -24,3 +24,4 @@ The **position exit** script is executed in a similar fashion to the **position 
 ## Instructions
 
  - ftx.py: Enter API Key and Subaccount name
+ - Create a file *tokenfile.token* and populate it with your API Secret. Note: the gitignore is configured to prohibit any file with the *.token* extension from being pushed to GitHub.

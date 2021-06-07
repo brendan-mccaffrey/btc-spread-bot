@@ -3,7 +3,7 @@
 *.token
 
 # We dont want to push our generated excel data
-*.xslx
+*.xlsx
 
 # We don't want to push our IDE configuration folder(s) to our repo.
 .idea/

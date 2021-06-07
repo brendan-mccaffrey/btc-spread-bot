@@ -2,4 +2,12 @@
 
  - Is future position automatically liquidated upon expiration?
 
+ - Is trigger price same as limit?
+
+ - Are ioc or post_only relevant in our order placements?
+ 
+ - What to do if spot doesn't go through? entrance and exit
+
+ - What to do if future order doesn't go through? entrance and exit
+
  
