@@ -1,5 +1,7 @@
 # FTX Algorithmic Trading Client
 
+This is a Python script designed to capture arbitrage opportunity between BTC future and spot prices. It ulitizes the FTX API, to place orders, monitor positions, and exit positions in accordance with the strategy. This script will generate a file *transaction_logs.xlsx* file with all transaction execution information for P/L record purposes.
+
 ## Structure
 
 This trading bot is made up of three components
@@ -23,5 +25,5 @@ The **position exit** script is executed in a similar fashion to the **position 
 
 ## Instructions
 
- - ftx.py: Enter API Key and Subaccount name
+ - Configure *script.py* with the desired spread, api_key, and subaccount_name (optional) of your profile.
  - Create a file *tokenfile.token* and populate it with your API Secret. Note: the gitignore is configured to prohibit any file with the *.token* extension from being pushed to GitHub.
