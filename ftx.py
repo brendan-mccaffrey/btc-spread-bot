@@ -459,13 +459,7 @@ def exit_position(client, spot_price, future_price):
     recordAction("BTC/USD", filled_price3, 'sell')
 
     return True
-
-
-
-            
-
-            
-
+      
 
 def tester(client):
     print(client.get_positions())
