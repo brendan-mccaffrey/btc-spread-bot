@@ -71,10 +71,10 @@ def json_to_pandas(data):
 def pretty_print(df):
     print(tabulate(df, headers='keys', tablefmt='psql'))
 
-def create_excel(dfs):
+def create_excel(dfs, name = 'output.xlsx'):
     wb = Workbook()
     ws = wb.active
-    with pd.ExcelWriter('output.xlsx', options={'strings_to_formulas': False}) as writer:
+    with pd.ExcelWriter(name, options={'strings_to_formulas': False}) as writer:
         writer.book = wb
         writer.sheets = dict((ws.title, ws) for ws in wb.worksheets)
 
@@ -84,14 +84,8 @@ def create_excel(dfs):
         writer.save()
 
 
-def generate_excel(market1 = "BTC-0924", market2 = "BTC-USD"):
-    jan042021 = 1609791775
-    now = int(time.time())
-
-    dataframes["BTC-0924"] = get_future_data(client, jan042021, now)
-    dataframes["BTC-USD"] = get_spot_data(client, jan042021, now)
-
-    create_excel(dataframes)
+def generate_logs():
+    create_excel(records, 'transaction_logs.xlsx')
 
 def get_last_prices(client, markets):
     data = []
@@ -303,7 +297,7 @@ def run(mydesired_spread, myapi_key, mysubaccount_name):
     while prices is None:
         sleep(5)
         prices = evaluate_opportunity(client)
-        
+
     print("Received: ", prices)
 
     if enter_position(client, prices['BTC/USD'], prices['BTC-0924'], 100):
@@ -312,9 +306,6 @@ def run(mydesired_spread, myapi_key, mysubaccount_name):
     else:
         # the script will never get here because enter_position will only return True, or else it won't return
         pass
-   
-        
-    
 
     # pretty_print(df)
 
