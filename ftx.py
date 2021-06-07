@@ -20,10 +20,12 @@ from datetime import date, datetime
 
 desired_spread = 0.05
 records = pd.DataFrame(columns = ['Timestamp', 'Asset', 'Price', 'Action'])
-api_key = None
-subaccount_name = None
+spot_entry_price = None
+spot_pos_size = None
+future_entry_price = None
+future_pos_size = None
 
-def initialize_client():
+def initialize_client(api_key, subaccount_name):
     tokenfile = 'tokenfile.token'
 
     # Throw an error if the authorization token file doesn't exist.
@@ -36,10 +38,9 @@ def initialize_client():
         tokenfiledata = tokenfilestream.readline().rstrip()
 
     # Configure account information here
-    global api_key, subaccount_name
-    api_secret = tokenfile
+    api_secret = tokenfiledata
 
-    return FtxClient(api_key, api_secret, subaccount_name)
+    return FtxClient(str(api_key), str(api_secret), subaccount_name)
 
 def get_perp_data(client, start_time = None, end_time = None):
     market = "BTC-PERP"
@@ -174,9 +175,9 @@ def waitForConfirmation(client, id, need_close = False):
             sleep(1)
 
 
-
-
 def enter_position(client, spot_price, future_price, amount):
+    # declare global variables for future monitoring / exiting
+    global future_pos_size, spot_pos_size
 
     # initialize variables for order placement
     allowed_slippage = 1.001    # margin for price movement 0.1%
@@ -204,15 +205,19 @@ def enter_position(client, spot_price, future_price, amount):
         filled_price = confirmation['avgFillPrice']
         btc = confirmation['filledSize'] / filled_price
         future_size = btc * future_price
+        # set global
+        spot_pos_size = confirmation['filledSize']
 
         if confirmation['status'] == "open":
             open = True
 
+        global spot_entry_price 
         # print summary of spot order
         if open:
             print("Spot order partially executed. You bought ", btc, " BTC @ $", filled_price)
             break
         elif confirmation['status'] == "closed":
+            spot_entry_price = filled_price
             print("Spot order fully executed. You bought ", btc, " BTC @ $", filled_price)
             recordAction('BTC/USD', filled_price, 'buy')
             break
@@ -232,10 +237,15 @@ def enter_position(client, spot_price, future_price, amount):
 
     filled_price2 = confirmation2['avgFillPrice']
     btc2 = confirmation2['filledSize'] / filled_price2
+    # set global
+    future_pos_size = confirmation2['filledSize']
 
     # print summary of future sell order
     print("Future order executed successfully. You sold ", btc2, " BTC worth of futures @ $", filled_price2)
     recordAction('BTC-0924', filled_price2, 'sell')
+
+    global future_entry_price
+    future_entry_price = filled_price2
 
     if not open:
         # if both orders were executed fully, celebrate locked spread and return True
@@ -248,6 +258,9 @@ def enter_position(client, spot_price, future_price, amount):
     filled_price1 = confirmation1['avgFillPrice']
     btc1 = confirmation1['filledSize'] / filled_price1
     future_size1 = btc1 * future_price
+    spot_entry_price = filled_price1
+    # adjust global
+    spot_pos_size = confirmation1['filledSize']
 
     # print summary of spot order
     print("Spot order was executed fully. You purchased an additional ", confirmation1['filledSize'] / filled_price1 - confirmation['filledSize'] / filled_price, " BTC @ $", filled_price1)
@@ -266,6 +279,9 @@ def enter_position(client, spot_price, future_price, amount):
 
     filled_price3 = confirmation3['price']
     btc3 = confirmation3['filledSize'] / filled_price3
+    future_entry_price = filled_price2 / confirmation2['filledSize'] + filled_price3 / confirmation3['filledSize']
+    # adjust global
+    future_pos_size += confirmation3['filledSize']
 
     # print summary of future sell order
     print("Future order executed successfully. You sold ", btc3, " BTC worth of futures @ $", filled_price3)
@@ -273,25 +289,19 @@ def enter_position(client, spot_price, future_price, amount):
     recordAction("BTC-0924", filled_price3, 'sell')
 
     return True
-    
-
-    
 
 def recordAction(asset, price, action):
     global records
     records = records.append({'Timestamp' : datetime.now(), 'Asset' : asset, 'Price' : price, 'Action' : action}, ignore_index=True)
 
-def startMonitoring(client):
-    pass
 
-def run(mydesired_spread, myapi_key, mysubaccount_name):
+def start_entry(mydesired_spread, myapi_key, mysubaccount_name, amount):
 
-    global desired_spread, api_key, subaccount_name
+    global desired_spread
     desired_spread = mydesired_spread
-    api_key = myapi_key
-    subaccount_name = mysubaccount_name
 
-    client = initialize_client()
+    client = initialize_client(myapi_key, mysubaccount_name)
+
     prices = evaluate_opportunity(client)
 
     while prices is None:
@@ -300,22 +310,162 @@ def run(mydesired_spread, myapi_key, mysubaccount_name):
 
     print("Received: ", prices)
 
-    if enter_position(client, prices['BTC/USD'], prices['BTC-0924'], 100):
-        print('Success')
-        startMonitoring(client)
+    if enter_position(client, prices['BTC/USD'], prices['BTC-0924'], amount):
+        return client
     else:
         # the script will never get here because enter_position will only return True, or else it won't return
-        pass
+        return None
 
     # pretty_print(df)
 
-def tester():
-    s = datetime.now()
+def get_current_prices(client):
+    prices = dict()
+    data = get_last_prices(client, ["BTC/USD", "BTC-0924"])
 
-    sleep(10)
+    for d in data:
+        print("Storing ask price for ", d['name'] , ": ", d['ask'])
+        prices[d['name']] = d['ask']
 
-    f = datetime.now()
+    return prices
 
-    diff = f - s
+def calc_current_spread(prices):
+    return prices['BTC/USD'] / prices['BTC-0924'] - 1
 
-    print(diff.seconds)
+def monitor_position(client):
+    flag = True
+
+    liq_price_estimates = dict()
+
+    resp = client.get_positions(True)
+    for pos in resp:
+        # store liquidation prices for future monitoring purposes
+        if "market" in pos:
+            liq_price_estimates[pos['market']] = pos['estimatedLiquidationPrice']
+        elif "future" in pos:
+            liq_price_estimates[pos['future']] = pos['estimatedLiquidationPrice']
+
+    while flag:
+        prices = get_current_prices(client)
+        curr_spread = calc_current_spread(prices)
+
+        if curr_spread <= 0:
+            flag = False
+            exit_position(client, prices['BTC/USD'], prices['BTC-0924'])
+
+        # # TODO: Add action for when current spread has increased
+        # if curr_spread >= TODO
+
+def exit_position(client, spot_price, future_price):
+    # declare global variables for use
+    global future_pos_size, spot_pos_size
+
+    # initialize variables for order placement
+    allowed_slippage = 0.999   # margin for price movement 0.1%
+    order_type = "limit"
+    # NOTE reduce_only is true as we are trying to exit our positions
+    reduce_only = True
+    ioc = False
+    post_only = False
+
+    open = False
+
+    # declare future order
+    print("PLACING FUTURE LIMIT BUY ORDER")
+    print("price: ", future_price)
+    print("size: ", future_pos_size)
+    print('------------------------------------------------------------------')
+
+    resp = client.place_conditional_order("BTC/USD", "buy", future_pos_size, order_type, future_price * allowed_slippage, reduce_only, ioc)
+
+    # wait for confirmation of future order
+    while True:
+        confirmation = waitForConfirmation(client, resp['id'])
+
+        filled_price = confirmation['avgFillPrice']
+        btc = confirmation['filledSize'] / filled_price  
+
+        if confirmation['status'] == "open":
+            open = True
+
+        # print summary of future order
+        if open:
+            print("Future order partially executed. You bought ", btc, " worth of BTC futures @ $", filled_price)
+            break
+        elif confirmation['status'] == "closed":
+            # set global
+            future_pos_size -= confirmation['filledSize']
+            print("Future order fully executed. You bought ", btc, " worth of BTC futures @ $", filled_price)
+            recordAction('BTC-0924', filled_price, 'buy')
+            break
+
+        # This loop breaks if and only if filledSize > 0
+
+ 
+    # declare spot order, matching the filledSize of the future order
+    print('----------------------------------------------------------------')
+    print("PLACING BTC/USD LIMIT SELL ORDER")
+    print("price: ", spot_price)
+    print("size: ", spot_pos_size)
+    resp2 = client.place_conditional_order("BTC/USD", "sell", spot_pos_size, order_type, spot_price * allowed_slippage, reduce_only, ioc)
+
+    # this will return the results of get_order_status only when the transaction has been closed (completed)
+    confirmation2 = waitForConfirmation(client, resp2['id'], need_close=True)
+
+    filled_price2 = confirmation2['avgFillPrice']
+    btc2 = confirmation2['filledSize'] / filled_price2
+    # set global
+    spot_pos_size -= confirmation2['filledSize']
+
+    # print summary of spot sell order
+    print("Spot order executed successfully. You sold ", btc2, " BTC @ $", filled_price2)
+    recordAction('BTC/USD', filled_price2, 'sell')
+ 
+    if not open:
+        # if both orders were executed fully, return True
+        return True
+    
+    # this line will complete only when the future order is closed
+    confirmation1 = waitForConfirmation(client, resp['id'], need_close=True)
+
+    filled_price1 = confirmation1['avgFillPrice']
+    btc1 = confirmation1['filledSize'] / filled_price1
+    spot_size1 = btc1 * spot_price
+    # adjust global
+    future_pos_size -= confirmation1['filledSize']
+
+    # print summary of spot order
+    print("Spot order was executed fully. You purchased an additional ", confirmation1['filledSize'] / filled_price1 - confirmation['filledSize'] / filled_price, " BTC @ $", filled_price1)
+    # record future buy
+    recordAction("BTC-0924", filled_price1, 'buy')
+            
+    # declare second spot order
+    print('----------------------------------------------------------------')
+    print("PLACING BTC/USD LIMIT SELL ORDER")
+    print("price: ", spot_price)
+    print("size: ", spot_pos_size)
+
+    resp1 = client.place_conditional_order("BTC-0924", "sell", spot_pos_size, order_type, spot_price * allowed_slippage, reduce_only, ioc)
+    # this line will complete only when the sell order is closed
+    confirmation3 = waitForConfirmation(client, resp1['id'], need_close=True)
+
+    filled_price3 = confirmation3['price']
+    btc3 = confirmation3['filledSize'] / filled_price3
+    # adjust global
+    spot_pos_size -= confirmation3['filledSize']
+
+    # print summary of future sell order
+    print("Spot order executed successfully. You sold ", btc3, " BTC @ $", filled_price3)
+    # record transaction
+    recordAction("BTC/USD", filled_price3, 'sell')
+
+    return True
+
+
+
+            
+
+            
+
+
+def tester(client):
+    print(client.get_positions())

@@ -10,4 +10,16 @@
 
  - What to do if future order doesn't go through? entrance and exit
 
+ Technical
+
+ - What does get_positions response look like for spot assets / multiple assets
+
+
+ TODO
+
+ - Test monitor positions before running enter_position
+ - Execute strategy for when spread increases
+ - waitForConfirmation when status is open for too long or 'new'
+
+
  
