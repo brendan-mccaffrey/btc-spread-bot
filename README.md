@@ -22,8 +22,16 @@ The **position monitoring** script is triggered after the position is entered su
 
 The **position exit** script is executed in a similar fashion to the **position entrance** script. First, the API is queried for the current price of the two pairs, and confirms the spread is less than 0.1%. The script then places a limit sell for the *BTC* spot position, and awaits confirmation. A limit buy is then placed on the *BTC-0924* position if the position is not already exited. The resulting P/L from the position is then written to an excel sheet named *results.xslx*
 
+## Logs
+
+All transactions are logged into *transaction_logs.csv* for P/L tracking purposes.
+
+## Testing
+
+*testScript.py* holds a collection of individual test methods. The *run()* function has several commented invokations, which can be uncommented to test respective components.
 
 ## Instructions
 
  - Configure *script.py* with the desired spread, api_key, and subaccount_name (optional) of your profile.
  - Create a file *tokenfile.token* and populate it with your API Secret. Note: the gitignore is configured to prohibit any file with the *.token* extension from being pushed to GitHub.
+ - Edit 
