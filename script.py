@@ -1,5 +1,6 @@
 from module import FtxClient, FtxOtcClient 
 import ftx
+import testScript
 
 from tabulate import tabulate
 
@@ -17,17 +18,22 @@ import time
 if __name__ == '__main__':
 
     mydesired_spread = 0.10
-    myapi_key = 'aZYQ8mZy2mMBc-3a017ECpEDFX2AURo3wn1xUQto'
-    mysubaccount_name = None
+
+    # Main Account Read-Only
+    # myapi_key = 'IaTmKDfD9-sFn7RfDumFuoUudeI_XJ-x6C1EOTL5'
+    # Bot Account
+    myapi_key = 'H44-vetflB-eLYXoAE4_bHofqxB-x8i6vHSEuCVc'
+    mysubaccount_name = 'Bot-Account'
     # total notional value of two orders to be placed
-    amount = 100
+    amount = 10
 
-    client = ftx.start_entry(mydesired_spread, myapi_key, mysubaccount_name, amount)
+    client = testScript.run(myapi_key, mysubaccount_name, amount)
+    # client = ftx.start_entry(mydesired_spread, myapi_key, mysubaccount_name, amount)
 
 
-    if client is not None:
-        print("Successfuly entered position. The transaction history was exported into transaction_logs.xlsx")
-        ftx.monitor_position(client)
+    # if client is not None:
+    #     print("Successfuly entered position. The transaction history was exported into transaction_logs.xlsx")
+    #     ftx.monitor_position(client)
 
-    else:
-        print("Position was not entered successfully. Please manually check the status of the FTX portfolio")
+    # else:
+    #     print("Position was not entered successfully. Please manually check the status of the FTX portfolio")

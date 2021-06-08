@@ -15,6 +15,15 @@
  - What does get_positions response look like for spot assets / multiple assets
 
 
+Edge Cases
+ - Entering position
+  - spot limit order is not filled - how long should we waitForConfirmation
+  - spot order is partially filled - under what circumstances should we cancel the remaining
+  - spot order is filled, future order is pending for 20+ seconds - market order? increase limit? ...
+  - spot order is partially filled, partial future order is partially filled
+  - spot order is filled fully, future order is partially filled (prolly same thing as above)
+
+
  TODO
 
  - Test monitor positions before running enter_position
