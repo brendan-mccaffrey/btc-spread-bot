@@ -1,6 +1,6 @@
 # FTX Algorithmic Trading Client
 
-This is a Python script designed to capture arbitrage opportunity between BTC future and spot prices. It ulitizes the FTX API, to place orders, monitor positions, and exit positions in accordance with the strategy. This script will generate a file *transaction_logs.xlsx* file with all transaction execution information for P/L record purposes.
+This is a Python script designed to capture arbitrage opportunity between BTC future and spot prices. It ulitizes the FTX API, to place orders, monitor positions, and exit positions in accordance with the strategy. 
 
 ## Structure
 
