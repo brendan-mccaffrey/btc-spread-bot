@@ -12,7 +12,7 @@ Upon invoking *script.py*, assuming it's configured correctly, the following wil
  4. The script priodically (every 5 seconds) queries FTX for the current premium, and triggers `enter_position()` if the current implied annualized return is above the 50th percentile (taking into account the possibility of encountering worst-case slippage in order execution).
  5. Orders of the same size (denominated in terms of underlying token) are placed for the spot (buy) and future (sell) markets, confirmation details are printed to the console, and the transactions are logged to *transaction_logs.csv*.
  6. `monitor_position()` is invoked, which periodically (every 5 seconds) queries FTX for the current premium and triggers `exit_position()` if the current implied annualized return is below the 25th percentile (taking into account the possibility of encountering worst-case slippage in order execution).
- 7. Equal orders as in **5.** are placed in the opposite directions so close out the positions. Again, confirmation details are printed to the console, and the transactions are logged to *transaction_logs.csv*.
+ 7. Orders of the same size (denominated in terms of underlying token) are placed for the spot (sell) and future (buy) markets close out the positions. Again, confirmation details are printed to the console, and the transactions are logged to *transaction_logs.csv*.
 
 ## Structure
 
