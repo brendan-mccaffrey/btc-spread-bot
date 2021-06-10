@@ -2,9 +2,21 @@
 
 This is a Python script designed to capture arbitrage opportunity between BTC future and spot prices. It ulitizes the FTX API, to place orders, monitor positions, and exit positions in accordance with the strategy. 
 
+## Functionality
+
+Upon invoking *script.py*, assuming it's configured correctly, the following will happen:
+
+ 1. Global variables will be assigned within ftx script, representing the paramaters of the invokation
+ 2. An FTX client is established
+ 3. The hourly historical premium values, since Jan 1 2021, are retreived to calculate the value of the 1st, 2nd, and 3rd quartiles of implied annualized return.
+ 4. The script priodically (every 5 seconds) queries FTX for the current premium, and triggers `enter_position()` if the current implied annualized return is above the 50th percentile (taking into account the possibility of encountering worst-case slippage in order execution).
+ 5. Orders of the same size (denominated in terms of underlying token) are placed for the spot (buy) and future (sell) markets, confirmation details are printed to the console, and the transactions are logged to *transaction_logs.csv*.
+ 6. `monitor_position()` is invoked, which periodically (every 5 seconds) queries FTX for the current premium and triggers `exit_position()` if the current implied annualized return is below the 25th percentile (taking into account the possibility of encountering worst-case slippage in order execution).
+ 7. Equal orders as in **5.** are placed in the opposite directions so close out the positions. Again, confirmation details are printed to the console, and the transactions are logged to *transaction_logs.csv*.
+
 ## Structure
 
-This trading bot is made up of three components
+This trading bot is made up of three main components
 
  - **Position Entrance**
  - **Position Monitoring**
@@ -28,10 +40,21 @@ All transactions are logged into *transaction_logs.csv* for P/L tracking purpose
 
 ## Testing
 
-*testScript.py* holds a collection of individual test methods. The *run()* function has several commented invokations, which can be uncommented to test respective components.
+*testScript.py* serves as a sandbox, holding a collection of individual test methods. The *run()* function has several, commented, invokations, which can be uncommented to test respective components. 
 
-## Instructions
+## Configuration
 
- - Configure *script.py* with the desired spread, api_key, and subaccount_name (optional) of your profile.
- - Create a file *tokenfile.token* and populate it with your API Secret. Note: the gitignore is configured to prohibit any file with the *.token* extension from being pushed to GitHub.
- - Edit 
+ 1. Create an account on [FTX](ftx.com), and create an API key
+ 2. In *script.py* assign values to the following variables accordingly:
+    - spot_market
+    - future_market
+    - exp_date
+    - myapi_key
+    - mysubaccount_name *optional*
+ 3. Create a file named *tokenfile.token* and paste your api_secret. Note - the *gitignore* file is configured to prohibit any file with the *.token* extension from being pushed to GitHub.
+ 4. In your terminal / command prompt program, navigate to the project folder, and run `python3 script.py`
+
+
+## Inquiries
+
+Please contact [Brendan McCaffrey](mailto:brendanchristophermccaffrey.com) with any inquiries.

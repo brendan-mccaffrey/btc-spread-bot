@@ -25,10 +25,56 @@ Edge Cases
 
 
  TODO
+  Enter position
+  - place future sell at correct size (in usd or coin terms?) without waitForConfirmation
+  - run confirmations after both orders placed
+  - record action 
+
+  - continue to monitor and exit
 
  - Test monitor positions before running enter_position
  - Execute strategy for when spread increases
  - waitForConfirmation when status is open for too long or 'new'
+
+
+
+
+ If you have negative PNL below 30k, they will liquidate if you dont have collateral
+
+
+
+
+
+
+Exit: <= 5%
+
+Enter: 50th percentile
+
+What is implied return if spot is higher end of margin and future is lower 
+
+Solve margin where worst case return is 25% percentile
+
+Make margin large enough so that order goes through with small order
+
+If anything goes wrong, it gives text message
+
+
+When does the contract settle?
+
+ - btw 2am and 3pm
+
+ close position 15-20 min before 
+
+
+Test closing position on below
+
+ Unicly Solana have open position for June 25 **confirm date
+
+ Litecoin is reverse position
+
+
+
+
 
 
  
