@@ -15,7 +15,7 @@ from os import error, path
 import pandas as pd
 import numpy as np
 
-import ftx
+import testFtx
 from module import FtxClient
 
 import time
@@ -42,7 +42,9 @@ def run(myapi_key, mysubaccount_name, my_spot_market, my_future_market, myexp_da
     future_market = my_future_market
     exp_date = myexp_date
 
-    client = ftx.initialize_client(myapi_key, mysubaccount_name)
+    client = testFtx.initialize_client(myapi_key, mysubaccount_name)
+
+    testNotification(12345)
 
     # print(test_exit(client))
 
@@ -295,6 +297,11 @@ def get_futures_position(client):
 def test_df_creation():
     df = pd.DataFrame({'Timestamp' : datetime.now(), 'Market' : 'M', 'Action' : 'A', 'Price' : 'P', 'Size': 'S'}, ignore_index = True)
     print(df)
+
+def testNotification(id):
+    message = "The FTX spread bot has been waiting on the confirmation of order ", id, " for over 60 seconds. Please manually inspect the FTX account."
+    ftx.sendNotification(str(message))
+            
 
 def test_print():
     print("Please refer to \'transaction_logs.csv\' to review the P/L for the trade.")

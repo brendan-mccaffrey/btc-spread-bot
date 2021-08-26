@@ -1,6 +1,8 @@
 from module import FtxClient, FtxOtcClient 
 import ftx
 import testScript
+import testFtx
+import exampleFtx
 
 from datetime import date
 
@@ -35,20 +37,24 @@ if __name__ == '__main__':
     '''
 
     # SPOT MARKET
-    spot_market = 'BTC/USD'
+    spot_market = 'AVAX/USD'
 
     # FUTURE MARKET
-    future_market = 'BTC-0625'
+    future_market = 'AVAX-0924'
 
     # JUNE 25
-    exp_date = date(2021, 6, 25)
+    exp_date = date(2021, 9, 24)
 
     # Bot Account
     myapi_key = 'H44-vetflB-eLYXoAE4_bHofqxB-x8i6vHSEuCVc'
     mysubaccount_name = 'Bot-Account'
 
     # Total notional value (USD) of two orders to be placed
-    amount = 10
+    amount = 40
+
+    # result = 
+    # result = ftx.start(myapi_key, mysubaccount_name, spot_market, future_market, exp_date, amount)
+    result = exampleFtx.start(myapi_key, mysubaccount_name, spot_market, future_market, exp_date, amount)
 
     # result = testScript.run(myapi_key, mysubaccount_name, spot_market, future_market, exp_date, amount)
     # result = ftx.start(myapi_key, mysubaccount_name, spot_market, future_market, exp_date, amount)

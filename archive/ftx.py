@@ -4,7 +4,7 @@ from os import error, path
 import pandas as pd
 import smtplib
 
-from module import FtxClient #, FtxOtcClient    This is commented because the script currently does not use the OtcClient
+from module import FtxClient #, FtxOtcClient   # This is commented because the script currently does not use the OtcClient
 
 
 '''
@@ -12,7 +12,7 @@ ________________________________________________________________________________
 ------------------------------------------------------------------------------------------------------------------------------------------------
 
 /////////////////////////////////////////////////////////////////////////
-/////////////////////////// GLOBAL FUNCTIONS ////////////////////////////
+/////////////////////////// GLOBAL VARIABLES ////////////////////////////
 /////////////////////////////////////////////////////////////////////////
 
 ________________________________________________________________________________________________________________________________________________
@@ -26,7 +26,6 @@ quartile2 = None
 quartile3 = None
 margin_buy = 1.002
 margin_sell = 0.998
-
 
 '''
 ________________________________________________________________________________________________________________________________________________
@@ -73,7 +72,6 @@ def waitForConfirmation(client, id):
     :param id: The id of the order to confirm
     Returns: Ftx order status response
     '''
-    print("Waiting for confirmation..")
     # Store time at the beginning of function execution
     startTime = datetime.now()
 
@@ -90,7 +88,8 @@ def waitForConfirmation(client, id):
         # Calculate time elapsed to detect extremely long pending status
         elapsedTime = datetime.now() - startTime
         if elapsedTime.seconds > 60 and flag:
-            sendNotification("The FTX spread bot has been waiting on the confirmation of order ", id, " for over 60 seconds. \n Please manually inspect the FTX account.")
+            message = "The FTX spread bot has been waiting on the confirmation of order ", id, " for over 60 seconds. Please manually inspect the FTX account."
+            sendNotification(str(message))
             # Change flag so we only send message once
             flag = False
 
@@ -108,7 +107,10 @@ def enter_position(client, spot_price, future_price, amount):
     Returns: Nothing
     '''
     # Print to console that we are entering
-    print("")
+    print()
+    print("-----------------------------------------------------------------")
+    print("-----------------------------------------------------------------")
+    print()
     print(" --- Entering position.. ---")
     print("")
     
@@ -122,17 +124,19 @@ def enter_position(client, spot_price, future_price, amount):
     post_only = False
 
     # Place spot order
-    resp = client.place_order("BTC/USD", "buy", spot_price * margin_buy, spot_size, "limit", reduce_only, ioc, post_only)
+    resp = client.place_order(spot_market, "buy", spot_price * margin_buy, spot_size, "limit", reduce_only, ioc, post_only)
     # Place future order
-    resp2 = client.place_order("BTC-0924", "sell", future_price * margin_sell, spot_size, "limit", reduce_only, ioc, post_only)
+    resp2 = client.place_order(future_market, "sell", future_price * margin_sell, spot_size, "limit", reduce_only, ioc, post_only)
   
-    # Get confirmation (need_close = True)
+    print("Confirming spot position entry..")
     conf = waitForConfirmation(client, resp['id'])
+    print()
+    print("Confirming future position entry..")
     conf2 = waitForConfirmation(client, resp2['id'])
 
     # Log to console
-    print("-----------------------------------------------------------------")
-    print("-----------------------------------------------------------------")
+    print()
+    print("--------------------------------------------")
     print()
     print(" --- Position entries were successful --- ")
     print()
@@ -150,7 +154,7 @@ def enter_position(client, spot_price, future_price, amount):
     # Report successful position entrance to console
     celebrate(conf2['avgFillPrice'] / conf['avgFillPrice'] - 1)
 
-    return monitor_position(client)
+    return monitor_position(client, conf['filledSize'], conf2['filledSize'])
 
 
 def monitor_position(client, spot_size, future_size):
@@ -159,25 +163,23 @@ def monitor_position(client, spot_size, future_size):
     :param client: Ftx client
     Returns: Nothing
     '''
-    print("")
+    print()
     print(" --- Monitoring position.. ---")
-    print("")
 
     global spot_market, future_market
-    # Initialize variables for monitoring
-    flag = True
-    liq_price_estimates = dict()
-    positions = dict()
 
-    # Store liquidation prices for future monitoring purposes
-    resp = client.get_positions()
-    for pos in resp:
-        if pos['future'] == future_market:
-            liq_price_estimates[future_market] = pos['estimatedLiquidationPrice']
+    # # Store liquidation prices for future monitoring purposes
+    # resp = client.get_positions()
+    # for pos in resp:
+    #     if pos['future'] == future_market:
+    #         liq_price_estimates[future_market] = pos['estimatedLiquidationPrice']
+    #         print("Estimate liquidation price for ", future_market, " is :", liq_price_estimates[future_market])
 
     # Periodically query current annualized return until, with worst-case slippage, it's below Quartile 1
     prices = None
     while True:
+        print()
+        print("Evaluating sell opportunity..")
         prices = evaluate_exit_opportunity(client)
         if prices is not None:
             break
@@ -198,6 +200,9 @@ def exit_position(client, spot_price, future_price, spot_size, future_size):
     Returns: Nothing
     '''
     # Print to console that we are entering
+    print()
+    print("-----------------------------------------------------------------")
+    print("-----------------------------------------------------------------")
     print("")
     print(" --- Exiting position.. ---")
     print("")
@@ -214,24 +219,25 @@ def exit_position(client, spot_price, future_price, spot_size, future_size):
     resp = client.place_order(spot_market, "sell", spot_price * margin_sell, spot_size, "limit", False, ioc, post_only)
 
     # Get confirmations (need_close = True)
+    print("Confirming future market close..")
     conf2 = waitForConfirmation(client, resp['id'])
+    print()
+    print("Confirming spot market close..")
     conf = waitForConfirmation(client, resp2['id'])
+    print()
 
     # Log transactions to csv
-    recordAction(spot_market, 'buy', conf['avgFillPrice'], conf['filledSize'], conf['avgFillPrice'] * conf['filledSize'])
-    recordAction(future_market, 'sell', conf2['avgFillPrice'], conf2['filledSize'], conf2['avgFillPrice'] * conf2['filledSize'])
+    recordAction(future_market, 'buy', conf['avgFillPrice'], conf['filledSize'], conf['avgFillPrice'] * conf['filledSize'])
+    recordAction(spot_market, 'sell', conf2['avgFillPrice'], conf2['filledSize'], conf2['avgFillPrice'] * conf2['filledSize'])
 
     # Log to console
-    print("-----------------------------------------------------------------")
-    print("-----------------------------------------------------------------")
+    print("--------------------------------------------")
     print()
     print(" --- Position exits were successful --- ")
     print()
     print("Spot Sell - (Size: ", conf['filledSize'], ") (Market: ", spot_market, ") (Price: ", conf['avgFillPrice'], ")")
     print()
     print("Future Buy - (Size: ", conf2['filledSize'], ") (Market: ", future_market, ") (Price: ", conf2['avgFillPrice'], ")")
-    print()
-    print("Please refer to \'transaction_logs.csv\' to review the P/L for the trade.")
     print()
     print("-----------------------------------------------------------------")
     print("-----------------------------------------------------------------")
@@ -266,11 +272,12 @@ def start(myapi_key, mysubaccount_name, my_spot_market, my_future_market, myexp_
     client = initialize_client(myapi_key, mysubaccount_name)
 
     # Calculate annualized return quartiles based on historical data and assign globals accordingly
-    calc_quartiles(client, spot_market, future_market, exp_date)
+    calc_quartiles(client)
 
     # Query market for prices every 5 seconds until we find an opportunity
     prices = None
     while True:
+        print("Searching for opportunity to enter position..")
         prices = evaluate_enter_opportunity(client)
         if prices is not None:
             break
@@ -281,19 +288,20 @@ def start(myapi_key, mysubaccount_name, my_spot_market, my_future_market, myexp_
 
     # Print final message once the position is exited
     if result:
-        print("-----------------------------------------------------------------")
-        print("-----------------------------------------------------------------")
-        print("-----------------------------------------------------------------")
+        print("--------------------------------------------------------------------------------")
+        print("--------------------------------------------------------------------------------")
+        print("--------------------------------------------------------------------------------")
         print()
-        print("Timestamp", datetime.now())
-        print("Congratulations, you successfully executed a spread arbitrage. ")
+        print(" --- Timestamp: ", datetime.now(), " --- ")
         print()
-        print("Please check \'transaction_logs.csv\' to review the P/L for this trade.")
+        print(" --- Congratulations, arbitrage was successful! ---")
+        print()
+        print(" --- Please check \'transaction_logs.csv\' to review the P/L for this trade. --- ")
         print()
         print()
-        print("-----------------------------------------------------------------")
-        print("-----------------------------------------------------------------")
-        print("-----------------------------------------------------------------")
+        print("--------------------------------------------------------------------------------")
+        print("--------------------------------------------------------------------------------")
+        print("--------------------------------------------------------------------------------")
 
     return result
 
@@ -540,7 +548,7 @@ def calc_quartiles(client):
     '''
     print("Calculating quartiles of annualized returns..")
     global spot_market, future_market, quartile1, quartile2, quartile3
-    # Get hourly historical data
+    # Get hourly historical data from
     spot_resp = client.get_price_history(spot_market, 3600, int(datetime(2021, 1, 1).timestamp()), int(datetime.now().timestamp()))
     future_resp = client.get_price_history(future_market, 3600, int(datetime(2021, 1, 1).timestamp()), int(datetime.now().timestamp()))
 
@@ -560,12 +568,14 @@ def calc_quartiles(client):
     quartile2 = result['50%']
     quartile3 = result['75%']
 
-    print("-----------------------------------------------------------------")
-    print("-----------------------------------------------------------------")
+    print("--------------------------------------------")
+    print()
     print("Calculated current quartiles of:")
+    print()
     print("Quartile 1 : ", quartile1)
     print("Quartile 2 : ", quartile2)
     print("Quartile 3 : ", quartile3)
+    print()
     print("-----------------------------------------------------------------")
     print("-----------------------------------------------------------------")
 
